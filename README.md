@@ -1,1 +1,1 @@
-# ALM_S1
+# RNN_ALM_gating
