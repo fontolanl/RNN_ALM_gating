@@ -1,157 +1,66 @@
-clear
-close all
-
 %% load trained RNN data
 
-input_file_path = '~/Dropbox (HHMI)/Force learning/current_code/code_for_sharing/trained_RNN_output_data/';
+% input_file_path = 'D:\Dropbox (HHMI)\Force learning\current_code\code_for_sharing\git_paper_ALM_S1\RNN_ALM_gating\input_data\';
+% 
+% output_file_path = 'D:\Dropbox (HHMI)\Force learning\current_code\code_for_sharing\git_paper_ALM_S1\RNN_ALM_gating\output_data';
 
-file_name = 'N=1000_g=1.5_a=1_sn=0.1497_ss=0.1_sr=0.05_hin=0_Wc=0.1_Ws=1_Wr=1_22-Jan-2020 13:03:19';
+input_file_path = 'C:\Users\natne\Dropbox (HHMI)\Force learning\current_code\code_for_sharing\git_paper_ALM_S1\RNN_ALM_gating\input_data\';
+
+output_file_path = 'C:\Users\natne\Dropbox (HHMI)\Force learning\current_code\code_for_sharing\git_paper_ALM_S1\RNN_ALM_gating\output_data\';
+
+
+file_name = 'input_data_wramp';
 
 load([input_file_path, file_name,'.mat'])
 
-%%
-params_name = ['params_', file_name];
-% ramp = 'long';
-% ramp = 'short';
-
-cd('/Users/fontolanl10/Dropbox (HHMI)/Force learning/current_code/code_for_sharing/RNN_analysis')
-
-
 %% params from mat file
 
-if isfile(params_name)
-    load([params_name,'.mat'])
-    save_figs = ['Figures_',params_name];
+params_file_name = 'params_data_wramp';
 
-else
-    t_stim_start = ((1000-3500)/1000)./dt;
-    t_stim_end = ((1400-3500)/1000)./dt;
+load([input_file_path, params_file_name,'.mat'])
     
-    t_sample_start = ((500-3500)/1000)./dt;
-    t_sample_end = ((1500-3500)/1000)./dt;
-    
-    t_dist_early_start = ((1900-3500)/1000)./dt;
-    t_dist_early_end = ((2300-3500)/1000)./dt;
-    
-    t_dist_late_start = ((2700-3500)/1000)./dt;
-    t_dist_late_end = ((3100-3500)/1000)./dt;
-            
-    params.tau = tau;
-    params.dt = dt;
-    params.T = T;
-    params.N = N;
-    params.inp_chirp_temp = inp_chirp_temp;
-    params.inp_stim_temp = inp_stim_temp;
-    params.ramp_train = ramp_train;
-    params.f0 = f0;
-    params.beta0 = beta0;
-    params.theta0 = theta0;
-    params.W = W;
-    params.simtime = simtime;
-    params.simtime_len = simtime_len;
-    params.b = b;
-    params.eff_dt = eff_dt*dt;
-    params.des_r_left_norm = des_r_left_norm;
-    params.des_r_right_norm = des_r_right_norm;
-    % params.des_r_left_norm_cell = des_r_left_norm_cell;
-    % params.des_r_right_norm_cell = des_r_right_norm_cell;
-    params.des_r_left_norm_cell = des_r_left;
-    params.des_r_right_norm_cell = des_r_right;
-%     params.des_r_left_norm = des_rt_left;
-%     params.des_r_right_norm = des_rt_right;
-    params.des_out_left = des_out_left;
-    params.des_out_right = des_out_right;
-    params.idx_sorted = idx_sorted;
-    params.idx_sorted_l = idx_sorted_l;
-    params.fr_smooth = fr_smooth;    
-    params.fr_win = fr_win;
-    params.stim_sigma = stim_sigma;
-    params.t_sample_start = t_sample_start;
-    params.t_sample_end = t_sample_end;    
-    
-    % obtain firing rates
-    
-    des_r_left_temp = f0./(1.0 + exp(-beta0.*(des_out_left-theta0)));
-    des_r_right_temp = f0./(1.0 + exp(-beta0.*(des_out_right-theta0)));
-    
-    params.des_r_left = des_r_left_temp;
-    params.des_r_right = des_r_right_temp;
-    
-    % create directory where to save figures
-    mkdir(['Figures_',params_name]);
-    save_figs_folder = ['Figures_',params_name];
-    
-    save([params_name,'.mat'],'params')   
+N = params.N;
 
-end
+params.t_ramp_start = 500; %% time at which the ramping input begins
+params.t_stim_interval = [1000+1:1400]; %% stimulus presentation epoch
 
-%% Plot distribution of spike rates and average spike rate
+%% Compute coding direction using:
+%  f_cd(N_trials, ramp_mean, ramp_sigma, ramp_dur, sigma_noise_cd, params, T_trial, cd_span);
 
-figure
-histogram([mean(des_r_left(:,340:end),2);mean(des_r_right(:,340:end),2)])
-ylabel('No. of cells')
-xlabel('Spike rate (Hz)')
-set(gca,'fontname','Arial','color','w','fontsize',18)
+params.T_test = 5000;   % trial duration in ms
+params.ramp_dur = 3000;  % duration of ramp input
+params.sigma_noise_cd = 100./N;  % std of fast noise
+params.ramp_mean = 1.0;  % mean slope of ramping input
+params.ramp_sigma = 0.05;  % std of slope of ramping input
+params.amp_stim = 1;  % amplitude of stimulus
 
-figure
-scatter(mean(des_r_left(:,340:end),2)-mean(des_r_left(:,1:60),2),mean(des_r_right(:,340:end),2)-mean(des_r_right(:,1:60),2))
-xlabel({'Spike rate lick left trials'; 'baseline subtracted)'})
-ylabel({'Spike rate lick right trials'; 'baseline subtracted)'})
-set(gca,'fontname','Arial','color','w','fontsize',18)
+params.sigma_stim = 0.1;  % amplitude of stimulus
+params.endpoint = 3500; % decision time
 
-%%
-figure
-hold on
-scatter([mean(des_psth_left(:,340:end),2);mean(des_psth_right(:,340:end),2)], [mean(des_r_left(:,340:end),2);mean(des_r_right(:,340:end),2)])
-plot(0:90,0:90,'k')
-xlabel({'Spike rate lick left trials'; 'baseline subtracted)'})
-ylabel({'Spike rate lick right trials'; 'baseline subtracted)'})
-set(gca,'fontname','Arial','color','w','fontsize',18)
+params.amp_chirp = 1;  % amplitude of chirps
 
+cd_span = 200;  % window used to compuite the cd: last 200ms before the end of the delay period (3.5s)
 
-%% Compute coding direction (Choice mode) 
-% output_struct = f_cd(number of trials, ramp type, ramp slope, ramp duration,
-%                     ramp standard deviation, fast noise amplitude, shape of stimulus, 
-%                     parameters struct, trial duration (ms), cd_span)
+N_trials_cd = 200;  % total number of trials (left + right)
 
-ramp = 'delay';
-
-params.ramp_bsln = 0; 
-
-params.stim_amp = 1;
-params.chirp_amp = 1;
-
-ramp_amp = 1.0;
-ramp_sigma = 0.0;
-
-stim_shape_in = 'square';
-ramp_dur = 3000/dt;
-noise_sigma_cd = 0./N;
-
-N_trials_cd = 4;
-
-cd_span = 200/dt; % Choice mode window (always ending at the Go cue)
-
-[ struct_out_cd ] = f_cd(N_trials_cd, ramp, ramp_amp, ramp_dur, ramp_sigma, noise_sigma_cd, stim_shape_in, params, 5000, cd_span);
+[ cd_struct ] = f_cd(N_trials_cd, params, cd_span);
 
 %% Plot all trials (used to calculate coding direction)
 
 figure
 hold on
 for i = 1:N_trials_cd
-    if (i<=N_trials_cd/2)&&(ismember(i,struct_out_cd.correct_tri_left_nd))
-        plot(mean(struct_out_cd.rp_nd_mat_all_cd(:,:,i)),'r');
-    elseif (i>N_trials_cd/2)&&(ismember(i,struct_out_cd.correct_tri_right_nd + N_trials_cd/2))
-        plot(mean(struct_out_cd.rp_nd_mat_all_cd(:,:,i)),'b');
-    elseif (i<=N_trials_cd/2)&&(ismember(i,struct_out_cd.error_tri_left_nd))
-        plot(mean(struct_out_cd.rp_nd_mat_all_cd(:,:,i)),'m');
-    elseif (i>N_trials_cd/2)&&(ismember(i,struct_out_cd.error_tri_right_nd + N_trials_cd/2))
-        plot(mean(struct_out_cd.rp_nd_mat_all_cd(:,:,i)),'c');
+    if (i<=N_trials_cd/2)&&(ismember(i,cd_struct.correct_tri_left_cd))
+        plot(mean(cd_struct.RNN_fr_cd(:,:,i)),'r');
+    elseif (i>N_trials_cd/2)&&(ismember(i,cd_struct.correct_tri_right_cd + N_trials_cd/2))
+        plot(mean(cd_struct.RNN_fr_cd(:,:,i)),'b');
+    elseif (i<=N_trials_cd/2)&&(ismember(i,cd_struct.error_tri_left_cd))
+        plot(mean(cd_struct.RNN_fr_cd(:,:,i)),'m');
+    elseif (i>N_trials_cd/2)&&(ismember(i,cd_struct.error_tri_right_cd + N_trials_cd/2))
+        plot(mean(cd_struct.RNN_fr_cd(:,:,i)),'c');
     else
-        plot(mean(struct_out_cd.rp_nd_mat_all_cd(:,:,i)),'k');
-        
+        plot(mean(cd_struct.RNN_fr_cd(:,:,i)),'k');    
     end
-    
 end
 ylabel('Spike Rate (Hz)')
 xlabel('Time to Go cue (s)')
@@ -165,19 +74,21 @@ title('All trials')
 %                 stimulus amplitude standard deviation, fast noise amplitude,
 %                 plot figures flag,  shape of stimulus)
 
-params.ramp_bsln = 0; 
-params.stim_amp = 1.0;
-params.chirp_amp = 1.0;
-N_trials_unperturbed = 10;
-noise_sigma = 100./N;
+% f_unperturbed(ramp, ramp_prefactor, ramp_dur, sigma_ramp, p, T_test, s_cd, N_trials_unperturbed,...
+%    sigma_stim, sigma_noise, plot_figs,  stim_shape_in)
 
-ramp_amp = 1.0;
-ramp_sigma = 0.05;
+params.T_test = 5000;   % trial duration in ms
+params.ramp_dur = 3000;  % duration of ramp input
+params.sigma_noise = 100./N;  % std of fast noise
+params.ramp_mean = 1.0;  % mean slope of ramping input
+params.ramp_sigma = 0.05;  % std of slope of ramping input
+params.amp_stim = 1; % mean amplitude of stimulus
+params.sigma_stim = 0.4; % std amplitude of stimulus
+N_trials_up = 200; % Number of trials
 
-dist_sigma = 0.1;
+plot_fig = 1;
 
-[ struct_out_unpert ] = f_unperturbed(N_trials_unperturbed, 'delay', ramp_amp, ramp_dur, ramp_sigma, params, 5000,...
-    struct_out_cd, dist_sigma, noise_sigma, 1, stim_shape_in);
+[ up_struct ] = f_up(N_trials_up, params, cd_struct, plot_fig);
 
 %% Generate trials with distractors
 % f_distractors(saving folder name, save figures flag, number of trials, parameters struct,...
@@ -187,88 +98,24 @@ dist_sigma = 0.1;
 %     full vs mini distractor flag, amplitude of full distractor, duration of full distractor,...
 %     amplitude of mini distractor, distractor amplitude std, shape of stimulus, input (stim and distr) direction type, vector of input direction (optional))
 
-N_trials_distr = 100;
+params.T_test = 5000;   % trial duration in ms
+params.ramp_dur = 3000;  % duration of ramp input
+params.sigma_noise = 100./N;  % std of fast noise
+params.ramp_mean = 1.0;  % mean slope of ramping input
+params.ramp_sigma = 0.05;  % std of slope of ramping input
 
-ramp_slope = 1.0;
-ramp_dur = 3000/dt;
-% sigma_ramp  = 0.1;
-ramp_sigma  = 0.05;
+params.amp_dist = 1;
+params.sigma_dist = 0.4;
+params.dur_dist = 400;
 
-stim_amp = 1.0;
-% sigma_stim = 0.4;
-stim_sigma = 0.1;
+params.t_dist_e = 1900;
+params.t_dist_l = 2700;
 
-stim_dur = 400/dt;
+params.endpoint = 3500;
 
-% sigma_noise = 100./N;
-noise_sigma = 100./N;
+N_trials_dist = 100;
 
-t_dist_1 = 1900/dt;
-t_dist_2 = 2700/dt;
+[ dist_struct ] = f_dist(N_trials_dist, params, cd_struct, up_struct, 's');
 
-full = 1;
-full_dist_amp = 1.0;
-full_dist_dur = 400/dt;
-mini_amp = 1.0;
-% sigma_dist = 0.4;
-dist_sigma = 0.1;
-
-endpoint = 3500/dt;
-
-[ struct_out_distr ] = f_distractors(save_figs_folder, 1, N_trials_distr, params, struct_out_cd, struct_out_unpert,...
-    'delay', ramp_dur, ramp_sigma, 5000,...
-    ramp_slope, stim_amp, stim_sigma, stim_dur, noise_sigma, t_dist_1, t_dist_2, endpoint,...
-    full, full_dist_amp, full_dist_dur, mini_amp, dist_sigma, stim_shape_in , 's');
-
-%% Explore proportion of switching trials as a function of ramping slope
-% f_distractors(saving folder name, save figures flag, number of trials, parameters struct,...
-%     output struct from f_cd, output struct from f_unperturbed, ramp type, ramp duration, ramp std, trial duration (ms),...
-%     ramp sope, stimulus amplitude mean, stimulus amplitude standard deviation, stimulus duration, fast noise amplitude,...
-%     time of first distractor, time of second distractor, endpoint (ms) to calculate performance,...
-%     full vs mini distractor flag, amplitude of full distractor, duration of full distractor,...
-%     amplitude of mini distractor, distractor amplitude std, shape of stimulus, input (stim and distr) direction type, vector of input direction (optional))
-
-N_trials_distr = 50;
-
-ramp_dur = 3000;
-ramp_sigma  = 0.05;
-ramp_slope = 1.00;
-
-stim_amp = 1.0;
-stim_sigma = 0.0;
-stim_dur = 400;
-
-noise_sigma = 100./N;
-
-
-full = 1;
-% amp_full = 1.0;
-amp_full = 1.0;
-
-full_dist_dur = 400;
-mini_amp = 1.0;
-dist_sigma = 0.0;
-
-endpoint = 3500;
-%
-t_dist_1 = 1900;
-tic
-ramp_vec = [0.9:0.05:1.2];
-for k = 1:length(ramp_vec)
-    ramp_slope = ramp_vec(k);
-    [ struct_out_distr ] = f_distractors(save_figs_folder, 1, params, struct_out_cd, struct_out_unpert,...
-        'delay', ramp_dur, ramp_sigma, 5000,...
-        ramp_slope, stim_amp, stim_sigma, stim_dur, noise_sigma, t_dist_1, t_dist_2, endpoint,...
-        N_trials_distr, full, full_dist_amp, full_dist_dur, mini_amp, dist_sigma, stim_shape_in , 's');
-    
-    perf_ramp(k) = length(struct_out_distr.error_tri_left{1});
-    
-end
-
-%% Ramping vs proportion of switching trials
-
-figure
-hold on
-plot(ramp_vec, perf_ramp./N_trials_distr,'Linewidth',2)
-xlabel('Ramping input slope')
-ylabel('Proportion of switching trials')
+%% save structs
+save(output_file_path, 'cd_struct', 'up_struct', 'dist_struct', '-v7.3')
