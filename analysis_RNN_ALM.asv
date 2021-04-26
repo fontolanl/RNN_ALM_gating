@@ -1,9 +1,8 @@
 %% load trained RNN data
 
-input_file_path = '~\RNN_ALM_gating\input_data\';
+input_file_path = 'C:\Users\natne\Dropbox (HHMI)\Force learning\current_code\code_for_sharing\git_paper_ALM_S1\RNN_ALM_gating\input_data\';
 
-
-output_file_path = '~\RNN_ALM_gating\output_data\';
+output_file_path = 'C:\Users\natne\Dropbox (HHMI)\Force learning\current_code\code_for_sharing\git_paper_ALM_S1\RNN_ALM_gating\output_data\';
 
 
 file_name = 'input_data_wramp';
