@@ -1,16 +1,13 @@
 %% load trained RNN data
 
 input_file_path = '~\RNN_ALM_gating\input_data\';
-
-
 output_file_path = '~\RNN_ALM_gating\output_data\';
 
 
-file_name = 'input_data_wramp';
-
+file_name = 'input_data_wramp'; % load input data
 load([input_file_path, file_name,'.mat'])
 
-%% params from mat file
+%% load parameters
 
 params_file_name = 'params_data_wramp';
 
@@ -66,13 +63,7 @@ title('Mean Firing rate (Network)')
 title('All trials')
 
 %% Generate trials without distractors
-%   f_unperturbed(number of trials, ramp type, ramp slope, ramp duration, ramp std,
-%                 parameters struct, trial duration (ms), output struct from f_cd,...
-%                 stimulus amplitude standard deviation, fast noise amplitude,
-%                 plot figures flag,  shape of stimulus)
-
-% f_unperturbed(ramp, ramp_prefactor, ramp_dur, sigma_ramp, p, T_test, s_cd, N_trials_unperturbed,...
-%    sigma_stim, sigma_noise, plot_figs,  stim_shape_in)
+% f_up(total # of trials, parameters, struct from calculating cd, plotting flag)
 
 params.T_test = 5000;   % trial duration in ms
 params.ramp_dur = 3000;  % duration of ramp input
@@ -88,12 +79,7 @@ plot_fig = 1;
 [ up_struct ] = f_up(N_trials_up, params, cd_struct, plot_fig);
 
 %% Generate trials with distractors
-% f_distractors(saving folder name, save figures flag, number of trials, parameters struct,...
-%     output struct from f_cd, output struct from f_unperturbed, ramp type, ramp duration, ramp std, trial duration (ms),...
-%     ramp sope, stimulus amplitude mean, stimulus amplitude standard deviation, stimulus duration, fast noise amplitude,...
-%     time of first distractor, time of second distractor, endpoint (ms) to calculate performance,...
-%     full vs mini distractor flag, amplitude of full distractor, duration of full distractor,...
-%     amplitude of mini distractor, distractor amplitude std, shape of stimulus, input (stim and distr) direction type, vector of input direction (optional))
+% f_dist(total # of trials, parameters, struct from f_cd, struct from f_up, distractor input vector)
 
 params.T_test = 5000;   % trial duration in ms
 params.ramp_dur = 3000;  % duration of ramp input
@@ -111,6 +97,15 @@ params.t_dist_l = 2700;
 params.endpoint = 3500;
 
 N_trials_dist = 100;
+
+
+% input vectors:
+% 's'  = same vector as stimulus during sample (sample mode)
+% 'cd' = coding direction
+% 'cstm' = custom vector // add the desired vector as an additional
+% input to f_dist -> f_dist(N_trials_dist, params, cd_struct, up_struct, 'cstm', vector)
+
+input_vector = 's';
 
 [ dist_struct ] = f_dist(N_trials_dist, params, cd_struct, up_struct, 's');
 
